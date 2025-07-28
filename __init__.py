@@ -15,7 +15,7 @@ md_version = "3.0"
 md_name = "Wikipedia"
 md_description = "Search Wikipedia articles"
 md_license = "MIT"
-md_url = "https://github.com/albertlauncher/python/tree/main/wikipedia"
+md_url = "https://github.com/albertlauncher/albert-plugin-python-wikipedia"
 md_authors = "@manuelschneid3r"
 
 class Plugin(PluginInstance, TriggerQueryHandler):
