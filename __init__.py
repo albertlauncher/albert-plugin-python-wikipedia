@@ -11,13 +11,13 @@ import json
 from pathlib import Path
 
 md_iid = "3.0"
-md_version = "3.0"
+md_version = "3.1"
 md_name = "Wikipedia"
 md_description = "Search Wikipedia articles"
 md_license = "MIT"
 md_url = "https://github.com/albertlauncher/albert-plugin-python-wikipedia"
-md_authors = "@manuelschneid3r"
-md_maintainers = ["@manuelschneid3r"]
+md_authors = ["@ManuelSchneid3r"]
+md_maintainers = ["@ManuelSchneid3r"]
 
 class Plugin(PluginInstance, TriggerQueryHandler):
 
