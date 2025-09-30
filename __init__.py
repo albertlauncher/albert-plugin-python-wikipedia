@@ -10,7 +10,7 @@ from urllib import request, parse
 import json
 from pathlib import Path
 
-md_iid = "3.0"
+md_iid = "4.0"
 md_version = "3.1"
 md_name = "Wikipedia"
 md_description = "Search Wikipedia articles"
@@ -25,7 +25,6 @@ class Plugin(PluginInstance, TriggerQueryHandler):
     searchUrl = 'https://%s.wikipedia.org/wiki/Special:Search/%s'
     user_agent = "org.albert.wikipedia"
     limit = 20
-    iconUrls = [f"file:{Path(__file__).parent}/wikipedia.png"]
 
     def __init__(self):
         PluginInstance.__init__(self)
@@ -61,6 +60,10 @@ class Plugin(PluginInstance, TriggerQueryHandler):
             warning('Error getting languages - socket timed out. Defaulting to EN.')
         except Exception as error:
             warning('Error getting languages (%s). Defaulting to EN.' % error)
+
+    @staticmethod
+    def makeIcon():
+        return makeImageIcon(Path(__file__).parent / "wikipedia.png")
 
     def extensions(self):
         return [self, self.fbh]
@@ -108,7 +111,7 @@ class Plugin(PluginInstance, TriggerQueryHandler):
                             id=self.id(),
                             text=title,
                             subtext=summary if summary else url,
-                            iconUrls=self.iconUrls,
+                            iconFactory=Plugin.makeIcon,
                             actions=[
                                 Action("open", "Open article on Wikipedia", lambda u=url: openUrl(u)),
                                 Action("copy", "Copy URL to clipboard", lambda u=url: setClipboardText(u))
@@ -126,7 +129,7 @@ class Plugin(PluginInstance, TriggerQueryHandler):
                     id=self.id(),
                     text=self.name(),
                     subtext="Enter a query to search on Wikipedia",
-                    iconUrls=self.iconUrls
+                    iconFactory=Plugin.makeIcon
                 )
             )
 
@@ -135,7 +138,7 @@ class Plugin(PluginInstance, TriggerQueryHandler):
             id=self.id(),
             text=self.name(),
             subtext="Search '%s' on Wikipedia" % q,
-            iconUrls=self.iconUrls,
+            iconFactory=Plugin.makeIcon,
             actions=[
                 Action("wiki_search", "Search on Wikipedia",
                        lambda url=self.searchUrl % (self.local_lang_code, q): openUrl(url))
