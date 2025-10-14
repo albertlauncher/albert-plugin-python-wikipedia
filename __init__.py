@@ -111,7 +111,7 @@ class Plugin(PluginInstance, TriggerQueryHandler):
                             id=self.id(),
                             text=title,
                             subtext=summary if summary else url,
-                            iconFactory=Plugin.makeIcon,
+                            icon_factory=Plugin.makeIcon,
                             actions=[
                                 Action("open", "Open article on Wikipedia", lambda u=url: openUrl(u)),
                                 Action("copy", "Copy URL to clipboard", lambda u=url: setClipboardText(u))
@@ -129,7 +129,7 @@ class Plugin(PluginInstance, TriggerQueryHandler):
                     id=self.id(),
                     text=self.name(),
                     subtext="Enter a query to search on Wikipedia",
-                    iconFactory=Plugin.makeIcon
+                    icon_factory=Plugin.makeIcon
                 )
             )
 
@@ -138,7 +138,7 @@ class Plugin(PluginInstance, TriggerQueryHandler):
             id=self.id(),
             text=self.name(),
             subtext="Search '%s' on Wikipedia" % q,
-            iconFactory=Plugin.makeIcon,
+            icon_factory=Plugin.makeIcon,
             actions=[
                 Action("wiki_search", "Search on Wikipedia",
                        lambda url=self.searchUrl % (self.local_lang_code, q): openUrl(url))
