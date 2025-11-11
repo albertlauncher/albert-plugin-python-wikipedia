@@ -8,9 +8,10 @@ from socket import timeout
 from time import sleep
 from urllib import request, parse
 import json
+import re
 from pathlib import Path
 
-md_iid = "4.0"
+md_iid = "5.0"
 md_version = "3.1.1"
 md_name = "Wikipedia"
 md_description = "Search Wikipedia articles"
@@ -19,19 +20,18 @@ md_url = "https://github.com/albertlauncher/albert-plugin-python-wikipedia"
 md_authors = ["@ManuelSchneid3r"]
 md_maintainers = ["@ManuelSchneid3r"]
 
-class Plugin(PluginInstance, TriggerQueryHandler):
+class Plugin(PluginInstance, GeneratorQueryHandler):
 
+    wikiurl = "https://en.wikipedia.org/wiki/"
     baseurl = 'https://en.wikipedia.org/w/api.php'
     searchUrl = 'https://%s.wikipedia.org/wiki/Special:Search/%s'
     user_agent = "org.albert.wikipedia"
-    limit = 20
 
     def __init__(self):
         PluginInstance.__init__(self)
-        TriggerQueryHandler.__init__(self)
+        GeneratorQueryHandler.__init__(self)
 
         self.fbh = FBH(self)
-        self.fuzzy = False
 
         self.local_lang_code = getdefaultlocale()[0]
         if self.local_lang_code:
@@ -55,6 +55,8 @@ class Plugin(PluginInstance, TriggerQueryHandler):
                 data = json.loads(response.read().decode('utf-8'))
                 languages = [lang['code'] for lang in data['query']['languages']]
                 if self.local_lang_code in languages:
+                    Plugin.baseurl = Plugin.baseurl.replace("en", self.local_lang_code)
+                    Plugin.wikiurl = Plugin.wikiurl.replace("en", self.local_lang_code)
                     self.baseurl = self.baseurl.replace("en", self.local_lang_code)
         except timeout:
             warning('Error getting languages - socket timed out. Defaulting to EN.')
@@ -71,67 +73,73 @@ class Plugin(PluginInstance, TriggerQueryHandler):
     def defaultTrigger(self):
         return "wiki "
 
-    def supportsFuzzyMatching(self):
-        return True
+    def fetch(self, query: str, batch_size: int, offset: int):
 
-    def setFuzzyMatching(self, enabled: bool):
-        self.fuzzy = enabled
+        params = {
+            'action': 'query',
+            'format': 'json',
+            'formatversion': 2,
+            'list': 'search',
+            'srlimit': batch_size,
+            'sroffset': offset,
+            'srsearch': query,
+        }
 
-    def handleTriggerQuery(self, query):
-        if stripped := query.string.strip():
+        get_url = "%s?%s" % (self.baseurl, parse.urlencode(params))
+        req = request.Request(get_url, headers={'User-Agent': self.user_agent})
 
-            # avoid rate limiting
-            for _ in range(50):
-                sleep(0.01)
-                if not query.isValid:
-                    return
+        with request.urlopen(req) as response:
+            data = json.loads(response.read().decode('utf-8'))
 
-            results = []
+        results = []
+        for match in data['query']['search']:
 
-            params = {
-                'action': 'opensearch',
-                'search': stripped,
-                'limit': self.limit,
-                'utf8': 1,
-                'format': 'json',
-                'profile': 'fuzzy' if self.fuzzy else 'normal'
-            }
-            get_url = "%s?%s" % (self.baseurl, parse.urlencode(params))
-            req = request.Request(get_url, headers={'User-Agent': self.user_agent})
+            title = match['title']
+            snippet = re.sub("<.*?>", "", match['snippet'])
+            url = self.wikiurl + parse.quote(title.replace(' ', '_'))
 
-            with request.urlopen(req) as response:
-                data = json.loads(response.read().decode('utf-8'))
-
-                for i in range(0, min(self.limit, len(data[1]))):
-                    title = data[1][i]
-                    summary = data[2][i]
-                    url = data[3][i]
-                    results.append(
-                        StandardItem(
-                            id=self.id(),
-                            text=title,
-                            subtext=summary if summary else url,
-                            icon_factory=Plugin.makeIcon,
-                            actions=[
-                                Action("open", "Open article on Wikipedia", lambda u=url: openUrl(u)),
-                                Action("copy", "Copy URL to clipboard", lambda u=url: setClipboardText(u))
-                            ]
-                        )
-                    )
-
-            if not results:
-                results.append(self.createFallbackItem(stripped))
-
-            query.add(results)
-        else:
-            query.add(
+            results.append(
                 StandardItem(
                     id=self.id(),
-                    text=self.name(),
-                    subtext="Enter a query to search on Wikipedia",
-                    icon_factory=Plugin.makeIcon
+                    text=title,
+                    subtext=snippet if snippet else url,
+                    icon_factory=Plugin.makeIcon,
+                    actions=[
+                        Action("open", "Open article", lambda u=url: openUrl(u)),
+                        Action("copy", "Copy URL", lambda u=url: setClipboardText(u))
+                    ]
                 )
             )
+        return results
+
+    def items(self, ctx):
+        query = ctx.query.strip()
+
+        if not query:
+            yield [StandardItem(id=self.id(),
+                                text=self.name(),
+                                subtext="Enter a query to search on Wikipedia",
+                                icon_factory=Plugin.makeIcon)]
+            return
+
+        # naive throttling
+        # https://www.mediawiki.org/wiki/Wikimedia_REST_API#Terms_and_conditions
+        for _ in range(5):
+            sleep(0.001)
+            if not ctx.isValid:
+                return
+
+        offset = 0
+        items = self.fetch(query, 10, offset)
+
+        if not items:
+            yield [self.createFallbackItem(query)]
+            return
+
+        while items:
+            yield items
+            offset += 10
+            items = self.fetch(query, 10, offset)
 
     def createFallbackItem(self, q: str) -> Item:
         return StandardItem(
