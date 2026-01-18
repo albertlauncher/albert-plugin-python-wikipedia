@@ -65,7 +65,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
 
     @staticmethod
     def makeIcon():
-        return makeImageIcon(Path(__file__).parent / "wikipedia.png")
+        return Icon.image(Path(__file__).parent / "wikipedia.png")
 
     def extensions(self):
         return [self, self.fbh]
