@@ -12,7 +12,7 @@ import re
 from pathlib import Path
 
 md_iid = "5.0"
-md_version = "3.1.1"
+md_version = "3.2.0"
 md_name = "Wikipedia"
 md_description = "Search Wikipedia articles"
 md_license = "MIT"
