@@ -11,7 +11,7 @@ import json
 import re
 from pathlib import Path
 
-md_iid = "5.0"
+md_iid = "6.0"
 md_version = "3.2.0"
 md_name = "Wikipedia"
 md_description = "Search Wikipedia articles"
@@ -126,7 +126,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         # https://www.mediawiki.org/wiki/Wikimedia_REST_API#Terms_and_conditions
         for _ in range(5):
             sleep(0.001)
-            if not ctx.isValid:
+            if not ctx.is_valid:
                 return
 
         offset = 0
